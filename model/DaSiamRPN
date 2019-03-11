@@ -1,3 +1,15 @@
+"""
+This docker image is build for DaSiamRPN
+
+GitHub: https://github.com/foolwood/DaSiamRPN
+arXiv: https://arxiv.org/pdf/1808.06048.pdf
+
+Requirement:
+  python2.7
+  pytorch == 0.3.1
+  numpy (1.15.3 in this image)
+  opencv-python (3.4.0 in this image)
+"""
 FROM floydhub/pytorch:0.3.1-gpu.cuda9cudnn7-py2.37
 LABEL maintainer=afun@afun.tw
 SHELL ["/bin/bash", "-c"]
