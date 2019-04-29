@@ -1,15 +1,14 @@
-"""
-This docker image is build for DaSiamRPN
+# This docker image is build for DaSiamRPN
+#
+# GitHub: https://github.com/foolwood/DaSiamRPN
+# arXiv: https://arxiv.org/pdf/1808.06048.pdf
+#
+# Requirement:
+#   python2.7
+#   pytorch == 0.3.1
+#   numpy (1.15.3 in this image)
+#   opencv-python (3.4.0 in this image)
 
-GitHub: https://github.com/foolwood/DaSiamRPN
-arXiv: https://arxiv.org/pdf/1808.06048.pdf
-
-Requirement:
-  python2.7
-  pytorch == 0.3.1
-  numpy (1.15.3 in this image)
-  opencv-python (3.4.0 in this image)
-"""
 FROM floydhub/pytorch:0.3.1-gpu.cuda9cudnn7-py2.37
 LABEL maintainer=afun@afun.tw
 SHELL ["/bin/bash", "-c"]
@@ -18,16 +17,36 @@ ARG USER_ID
 ARG GROUP_ID
 
 # Dynamic build image with current user
-# docker build --build-arg USER_ID=$(id -u $USER) --build-arg GROUP_ID=$(id -g $USER) -t afun/mydocker:DaSiamRPN -f DaSiamRPN .
-# docker run --rm -it -u $(id -u ${USER}):$(id -g ${USER}) afun/mydocker:DaSiamRPN bash
+#
+# docker build \
+#   --build-arg USER_ID=$(id -u $USER) \
+#   --build-arg GROUP_ID=$(id -g $USER) \
+#   -t afun/mydocker:DaSiamRPN -f DaSiamRPN .
+#
+# docker run --rm -it \
+#   -e DISPLAY=$DISPLAY \
+#   -v $(pwd):/home/dasiamrpn/project \
+#   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+#   afun/mydocker:DaSiamRPN bash
 
 RUN if [ ${USER_ID:-0} -ne 0 ] && [ ${GROUP_ID:-0} -ne 0 ]; then \
     groupadd -g ${GROUP_ID} dasiamrpn && \
     useradd -r -u ${USER_ID} -g dasiamrpn dasiamrpn; fi
 
 WORKDIR /home/dasiamrpn
-RUN /bin/cp /etc/skel/.bashrc /home/dasiamrpn && \
+RUN echo "========== Customize bash and permission ==========" && \
+    /bin/cp /etc/skel/.bashrc /home/dasiamrpn && \
     chown dasiamrpn:dasiamrpn /home/dasiamrpn/.bashrc && \
-    chown dasiamrpn:dasiamrpn /home/dasiamrpn
+    chown dasiamrpn:dasiamrpn /home/dasiamrpn && \
+    echo "========== Support H264 codec ==========" && \
+    apt-get update && apt-get install -y \
+        build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev \
+        ffmpeg && \
+    echo "========== Support filterpy requirement ==========" && \
+    pip install --upgrade pip==9.0.1 && \
+    echo "========== Reduce image size ==========" && \
+    apt-get autoremove -y && apt-get autoclean -y
+
 ENV force_color_prompt=yes
 USER dasiamrpn
+RUN pip install filterpy --user
