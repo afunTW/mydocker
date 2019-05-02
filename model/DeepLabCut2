@@ -1,0 +1,55 @@
+# This docker image is build for DeepLabCut2
+# Source from https://github.com/MMathisLab/Docker4DeepLabCut2.0
+#
+# Modified :
+#   non-root user account
+
+FROM python:3
+LABEL maintainer=afun@afun.tw
+SHELL ["/bin/bash", "-c"]
+
+ARG USER_ID
+ARG GROUP_ID
+
+# build image with current user info
+#
+# docker build \
+# --build-arg USER_ID=$(id -u $USER) \
+# --build-arg GROUP_ID=$(id -g $USER) \
+# -t afun/mydocker:DeepLabCut2 -f DeepLabCut2 .
+#
+# nvidia-docker run --rm -it \
+# -e DISPLAY=$DISPLAY \
+# -v $(pwd):/home/deeplabcut2/project \
+# -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+# afun/mydocker:DeeoLabCut2 bash
+
+RUN if [ ${USER_ID:-0} -ne 0 ] && [ ${GROUP_ID:-0} -ne 0 ]; then \
+    groupadd -g ${GROUP_ID} deeplabcut2 && \
+    useradd -r -u ${USER_ID} -g deeplabcut2 deeplabcut2; fi
+
+WORKDIR /home/deeplabcut2
+RUN echo "=============== Customize bash and permission  ===============" && \
+    /bin/cp /etc/skel/.bashrc /home/deeplabcut2 && \
+    chown deeplabcut2:deeplabcut2 /home/deeplabcut2 && \
+    chown deeplabcut2:deeplabcut2 /home/deeplabcut2/.bashrc && \
+    echo "=============== install python dependency ===============" && \
+    pip install imageio imageio-ffmpeg
+
+# Install deep learning env
+FROM bethgelab/deeplearning:cuda9.0-cudnn7
+RUN echo "=============== install deep learning dependency  ===============" && \
+    apt-get update && apt-get -y install ffmpeg wget && \
+    pip3 install --upgrade pip==18.0 && \
+    pip3 install tensorflow-gpu==1.8 deeplabcut ipywidgets seaborn && \
+    echo "=============== install wxPython  ===============" && \
+    pip3 install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-16.04 wxPython && \
+    apt-get update && apt-get install -y libgtk-3-0 python3-tk && \
+    echo "========== Reduce image size ==========" && \
+    apt-get autoremove -y && apt-get autoclean -y
+
+ENV force_color_prompt=yes
+USER deeplabcut2
+
+# Customized vim
+RUN wget -c https://raw.githubusercontent.com/afunTW/afun-env/master/vim/vimrc -O ~/.vimrc
